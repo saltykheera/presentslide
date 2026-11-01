@@ -367,12 +367,14 @@ export function SlideNavigator({
             </div>
           </div>
 
-          {/* Modal Body / Slide List */}
-          {!isMinimized && (
-            <div
-                      ? "flex flex-row items-center gap-1.5 overflow-x-auto overflow-y-hidden max-h-32 py-1.5"
-                      : "flex flex-col overflow-y-auto space-y-1.5 max-h-[65vh]"
-                  }`}
+        {/* Modal Body / Slide List */}
+        {!isMinimized && (
+          <div
+            className={`flex-1 p-1.5 ${
+              orientation === "horizontal"
+                ? "flex flex-row items-center gap-1.5 overflow-x-auto overflow-y-hidden max-h-32 py-1.5"
+                : "flex flex-col overflow-y-auto space-y-1.5 max-h-[65vh]"
+            }`}
           >
             {slides.length === 0 ? (
               <div className="p-3 text-center text-[11px] text-zinc-400 leading-normal flex flex-col items-center justify-center gap-1.5 w-full">
@@ -417,12 +419,14 @@ export function SlideNavigator({
               </div>
 
               <span
-                      ? "bg-indigo-600 text-white"
-                      : "bg-zinc-200 dark:bg-zinc-700 text-zinc-600 dark:text-zinc-300"
-                    }`}
-                        >
-                          {idx + 1}
-                        </span>
+                className={`text-[8px] font-bold w-3 h-3 rounded flex items-center justify-center shrink-0 ${
+                  isActive
+                    ? "bg-indigo-600 text-white"
+                    : "bg-zinc-200 dark:bg-zinc-700 text-zinc-600 dark:text-zinc-300"
+                }`}
+              >
+                {idx + 1}
+              </span>
 
                         <div className="flex-1 min-w-0">
                           <p
@@ -510,11 +514,13 @@ export function SlideNavigator({
           <button
             type="button"
             onClick={onAdd16x9Slide}
-                    ? "w-20 h-24 flex-col gap-1 text-[10px]"
-                    : "w-full py-1.5 px-2 gap-1 text-[11px]"
-                }`}
-                  title="Add 16:9 Slide"
-                >
+            className={`border border-dashed border-zinc-300 dark:border-zinc-700 hover:border-indigo-500 dark:hover:border-indigo-400 rounded-lg text-zinc-600 dark:text-zinc-300 hover:text-indigo-600 dark:hover:text-indigo-400 flex items-center justify-center transition-colors shrink-0 ${
+              orientation === "horizontal"
+                ? "w-20 h-24 flex-col gap-1 text-[10px]"
+                : "w-full py-1.5 px-2 gap-1 text-[11px]"
+            }`}
+            title="Add 16:9 Slide"
+          >
                   <Plus className="w-3.5 h-3.5" />
                   <span>Add Slide</span>
                 </button>
