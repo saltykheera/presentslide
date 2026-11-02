@@ -141,8 +141,8 @@ export function ExcalidrawEditor() {
       elements: saved.elements,
       appState: saved.appState
         ? {
-          viewBackgroundColor: saved.appState.viewBackgroundColor || "#ffffff",
-        }
+            viewBackgroundColor: saved.appState.viewBackgroundColor || "#ffffff",
+          }
         : undefined,
       files: saved.files as unknown as NonNullable<React.ComponentProps<typeof Excalidraw>["initialData"]> extends { files?: infer F } ? F : undefined,
       slideOrder: saved.slideOrder,
