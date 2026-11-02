@@ -8,11 +8,9 @@ import {
   ChevronDown,
   ChevronLeft,
   ChevronRight,
-  Layers,
   Minus,
   Maximize2,
   Copy,
-  Move,
   Plus,
   Image as ImageIcon,
   Download,
@@ -20,6 +18,7 @@ import {
   Check,
   LayoutGrid,
   Columns3,
+  Dock,
 } from "lucide-react";
 
 interface SlideNavigatorProps {
@@ -134,7 +133,7 @@ export function SlideNavigator({
   };
 
   // Keyboard shortcuts:
-  // - Ctrl+N or Cmd+N (also Ctrl+M, Cmd+M, Shift+Cmd+N): New Slide
+  // - Ctrl+N or Cmd+N (also Ctrl+M, Cmd+M): New Slide
   // - Ctrl+D or Cmd+D: Duplicate active slide
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -150,7 +149,7 @@ export function SlideNavigator({
 
       const isModifier = e.ctrlKey || e.metaKey;
 
-      // New slide: Ctrl+N / Cmd+N (also Ctrl+M / Cmd+M or Shift+Cmd+N)
+      // New slide: Ctrl+N / Cmd+N (also Ctrl+M / Cmd+M)
       if (
         (isModifier && e.key.toLowerCase() === "n") ||
         (isModifier && !e.shiftKey && e.key.toLowerCase() === "m")
@@ -202,6 +201,7 @@ export function SlideNavigator({
       setDraggedSlideIndex(null);
       return;
     }
+
     moveSlide(draggedSlideIndex, targetIndex);
     setDraggedSlideIndex(null);
   };
@@ -220,172 +220,175 @@ export function SlideNavigator({
       style={{
         left: `${position.x}px`,
         top: `${position.y}px`,
+        boxShadow:
+          "0px 0px 1px 0px rgba(0, 0, 0, 0.17), 0px 0px 3px 0px rgba(0, 0, 0, 0.08), 0px 7px 14px 0px rgba(0, 0, 0, 0.08)",
       }}
-      className={`fixed z-30 select-none transition-shadow ${isMinimized
+      className={`fixed z-30 select-none rounded-[10px] bg-[#ffffff] border border-[#e0e0e0] overflow-hidden transition-all duration-150 ${isMinimized
           ? "w-auto"
           : orientation === "horizontal"
-              ? "w-[min(88vw,700px)] max-h-40"
-              : "w-52 max-h-[calc(100vh-3rem)]"
+            ? "w-[min(90vw,720px)] max-h-44"
+            : "w-56 max-h-[calc(100vh-2.5rem)]"
         }`}
-      aria-label="Slides Modal"
+      aria-label="Slides Navigator"
     >
-        <div className="flex flex-col rounded-xl bg-white/95 dark:bg-zinc-900/95 backdrop-blur-md border border-zinc-200/90 dark:border-zinc-800 shadow-xl overflow-hidden text-xs">
-          {/* Hidden File Input for Importing .excalidraw files */}
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept=".excalidraw,.json"
-            onChange={handleFileInputChange}
-            className="hidden"
-          />
+      <div className="flex flex-col h-full text-xs font-sans text-[#1b1b1f]">
+        {/* Hidden File Input for Importing .excalidraw files */}
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept=".excalidraw,.json"
+          onChange={handleFileInputChange}
+          className="hidden"
+        />
 
-          {/* Modal Header */}
-          <div
-            onMouseDown={handleModalHeaderMouseDown}
-            className="flex items-center justify-between px-2.5 py-1.5 border-b border-zinc-200 dark:border-zinc-800 shrink-0 bg-zinc-50/90 dark:bg-zinc-800/80 cursor-move"
-            title="Drag modal header to move around canvas"
-          >
-            <div className="flex items-center gap-1.5">
-                <Move className="w-3 h-3 text-zinc-400" />
-                <Layers className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
-                <span className="font-semibold text-[11px] tracking-wide uppercase text-zinc-700 dark:text-zinc-200">
-                  Slides ({slides.length})
-                </span>
-                {isSaved && (
-                  <span
-                    className="flex items-center text-[9px] text-emerald-600 dark:text-emerald-400 gap-0.5"
-                    title="Auto-saved"
-                  >
-                    <Check className="w-2.5 h-2.5" />
-                  </span>
-                )}
-            </div>
-
-            <div className="flex items-center gap-0.5">
-              {/* Orientation Toggle (Horizontal Filmstrip vs Vertical Column) */}
-              {!isMinimized && (
-                <button
-                  type="button"
-                  onClick={toggleOrientation}
-                  title={
-                    orientation === "vertical"
-                        ? "Horizontal filmstrip"
-                        : "Vertical list"
-                  }
-                  aria-label="Toggle slide orientation"
-                  className="p-1 rounded text-zinc-500 hover:text-indigo-600 dark:hover:text-indigo-300 hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors"
-                >
-                  {orientation === "vertical" ? (
-                  <Columns3 className="w-3 h-3" />
-                  ) : (
-                  <LayoutGrid className="w-3 h-3" />
-                  )}
-                </button>
-              )}
-
-              {/* Quick dock to bottom button in horizontal mode */}
-              {!isMinimized && orientation === "horizontal" && (
-                <button
-                  type="button"
-                  onClick={dockToBottom}
-                  title="Snap to bottom"
-                  aria-label="Snap to bottom"
-                  className="px-1 py-0.5 rounded text-[9px] font-medium text-zinc-500 hover:text-indigo-600 dark:hover:text-indigo-300 hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors"
-                >
-                  Dock
-                </button>
-              )}
-
-              {/* Add 16:9 Slide Button */}
-              <button
-                type="button"
-                onClick={onAdd16x9Slide}
-                title="Add 16:9 Frame (Ctrl+N / ⌘N)"
-                aria-label="Add 16:9 Presentation Frame"
-                className="p-1 rounded text-zinc-500 hover:text-indigo-600 dark:hover:text-indigo-300 hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors"
+        {/* Clean Excalidraw-White Island Header */}
+        <div
+          onMouseDown={handleModalHeaderMouseDown}
+          className="flex items-center justify-between px-2.5 py-2 border-b border-[#ececf4] shrink-0 bg-[#f9f9fb] cursor-grab active:cursor-grabbing"
+          title="Drag header to position slides navigator"
+        >
+          {/* Left badge & counter */}
+          <div className="flex items-center gap-1.5">
+            <span className="px-1.5 py-0.5 rounded-full bg-[#ececf4] text-[10px] font-semibold text-[#495057]">
+              {slides.length}
+            </span>
+            {isSaved && (
+              <span
+                className="flex items-center text-[10px] text-[#0fb884] gap-0.5"
+                title="Saved to local storage"
               >
-                <Plus className="w-3 h-3" />
-              </button>
-
-              {/* Duplicate button for active slide */}
-              {!isMinimized && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    const targetSlideId = activeSlideId || (slides.length > 0 ? slides[0].frameId : null);
-                    if (targetSlideId) onDuplicateSlide(targetSlideId);
-                  }}
-                  disabled={slides.length === 0}
-                  title="Duplicate slide (Ctrl+D / ⌘D)"
-                  aria-label="Duplicate slide"
-                  className="p-1 rounded text-zinc-500 hover:text-indigo-600 dark:hover:text-indigo-300 hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors disabled:opacity-30"
-                >
-                  <Copy className="w-3 h-3" />
-                </button>
-              )}
-
-              {/* Export File Button */}
-              {!isMinimized && onExportProject && (
-                <button
-                  type="button"
-                  onClick={onExportProject}
-                  title="Export (.excalidraw)"
-                  aria-label="Export project"
-                  className="p-1 rounded text-zinc-500 hover:text-indigo-600 dark:hover:text-indigo-300 hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors"
-                >
-                  <Download className="w-3 h-3" />
-                </button>
-              )}
-
-              {/* Import File Button */}
-              {!isMinimized && onImportProject && (
-                <button
-                  type="button"
-                  onClick={() => fileInputRef.current?.click()}
-                  title="Import (.excalidraw)"
-                  aria-label="Import project"
-                  className="p-1 rounded text-zinc-500 hover:text-indigo-600 dark:hover:text-indigo-300 hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors"
-                >
-                  <Upload className="w-3 h-3" />
-                </button>
-              )}
-
-              {/* Minimize / Expand Toggle */}
-              <button
-                type="button"
-                onClick={() => setIsMinimized(!isMinimized)}
-                title={isMinimized ? "Expand" : "Minimize"}
-                aria-label={isMinimized ? "Expand" : "Minimize"}
-                className="p-1 rounded text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-200 hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors"
-              >
-                {isMinimized ? (
-                <Maximize2 className="w-3 h-3" />
-                ) : (
-                <Minus className="w-3 h-3" />
-                )}
-              </button>
-            </div>
+                <Check className="w-3 h-3" />
+              </span>
+            )}
           </div>
 
-        {/* Modal Body / Slide List */}
+          {/* Right Toolbar Actions */}
+          <div className="flex items-center gap-0.5">
+            {/* Orientation Toggle */}
+            {!isMinimized && (
+              <button
+                type="button"
+                onClick={toggleOrientation}
+                title={
+                  orientation === "vertical"
+                    ? "Switch to horizontal filmstrip (bottom dock)"
+                    : "Switch to vertical panel"
+                }
+                aria-label="Toggle layout orientation"
+                className="p-1 rounded-[6px] text-[#495057] hover:bg-[#ececf4] hover:text-[#6965db] transition-colors"
+              >
+                {orientation === "vertical" ? (
+                  <Columns3 className="w-3.5 h-3.5" />
+                ) : (
+                  <LayoutGrid className="w-3.5 h-3.5" />
+                )}
+              </button>
+            )}
+
+            {/* Quick dock to bottom button in horizontal mode */}
+            {!isMinimized && orientation === "horizontal" && (
+              <button
+                type="button"
+                onClick={dockToBottom}
+                title="Dock to bottom center"
+                aria-label="Dock to bottom"
+                className="p-1 rounded-[6px] text-[#495057] hover:bg-[#ececf4] hover:text-[#6965db] transition-colors"
+              >
+                <Dock className="w-3.5 h-3.5" />
+              </button>
+            )}
+
+            {/* Add 16:9 Slide Button */}
+            <button
+              type="button"
+              onClick={onAdd16x9Slide}
+              title="Add 16:9 Slide (Ctrl+N / ⌘N)"
+              aria-label="Add 16:9 Slide"
+              className="p-1 rounded-[6px] text-[#495057] hover:bg-[#ececf4] hover:text-[#6965db] transition-colors"
+            >
+              <Plus className="w-3.5 h-3.5" />
+            </button>
+
+            {/* Duplicate button for active slide */}
+            {!isMinimized && (
+              <button
+                type="button"
+                onClick={() => {
+                  const targetSlideId = activeSlideId || (slides.length > 0 ? slides[0].frameId : null);
+                  if (targetSlideId) onDuplicateSlide(targetSlideId);
+                }}
+                disabled={slides.length === 0}
+                title="Duplicate slide (Ctrl+D / ⌘D)"
+                aria-label="Duplicate slide"
+                className="p-1 rounded-[6px] text-[#495057] hover:bg-[#ececf4] hover:text-[#6965db] transition-colors disabled:opacity-30 disabled:pointer-events-none"
+              >
+                <Copy className="w-3.5 h-3.5" />
+              </button>
+            )}
+
+            {/* Export File Button */}
+            {!isMinimized && onExportProject && (
+              <button
+                type="button"
+                onClick={onExportProject}
+                title="Export .excalidraw project"
+                aria-label="Export project"
+                className="p-1 rounded-[6px] text-[#495057] hover:bg-[#ececf4] hover:text-[#6965db] transition-colors"
+              >
+                <Download className="w-3.5 h-3.5" />
+              </button>
+            )}
+
+            {/* Import File Button */}
+            {!isMinimized && onImportProject && (
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                title="Import .excalidraw project"
+                aria-label="Import project"
+                className="p-1 rounded-[6px] text-[#495057] hover:bg-[#ececf4] hover:text-[#6965db] transition-colors"
+              >
+                <Upload className="w-3.5 h-3.5" />
+              </button>
+            )}
+
+            <div className="w-[1px] h-3 bg-[#e0e0e0] mx-0.5" />
+
+            {/* Minimize / Expand Toggle */}
+            <button
+              type="button"
+              onClick={() => setIsMinimized(!isMinimized)}
+              title={isMinimized ? "Expand" : "Minimize"}
+              aria-label={isMinimized ? "Expand" : "Minimize"}
+              className="p-1 rounded-[6px] text-[#495057] hover:bg-[#ececf4] transition-colors"
+            >
+              {isMinimized ? (
+                <Maximize2 className="w-3.5 h-3.5" />
+              ) : (
+                <Minus className="w-3.5 h-3.5" />
+              )}
+            </button>
+          </div>
+        </div>
+
+        {/* Body Slide List in White Island theme */}
         {!isMinimized && (
           <div
-            className={`flex-1 p-1.5 ${
-              orientation === "horizontal"
-                ? "flex flex-row items-center gap-1.5 overflow-x-auto overflow-y-hidden max-h-32 py-1.5"
-                : "flex flex-col overflow-y-auto space-y-1.5 max-h-[65vh]"
-            }`}
+            className={`flex-1 p-2 bg-[#ffffff] excali-scrollbar ${orientation === "horizontal"
+                ? "flex flex-row items-center gap-2 overflow-x-auto overflow-y-hidden max-h-36 py-2"
+                : "flex flex-col overflow-y-auto space-y-2 max-h-[68vh]"
+              }`}
           >
             {slides.length === 0 ? (
-              <div className="p-3 text-center text-[11px] text-zinc-400 leading-normal flex flex-col items-center justify-center gap-1.5 w-full">
-                <span>No frames yet.</span>
+              <div className="p-4 text-center text-[11px] text-[#868e96] leading-normal flex flex-col items-center justify-center gap-2 w-full">
+                <span>No frames on canvas yet.</span>
                 <button
                   type="button"
                   onClick={onAdd16x9Slide}
-                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-indigo-600 hover:bg-indigo-700 text-white text-[11px] font-medium transition-colors"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-[8px] bg-[#6965db] hover:bg-[#5753d0] active:bg-[#4a47b1] text-white text-[11px] font-medium shadow-sm transition-colors"
                 >
-                  <Plus className="w-3 h-3" />
-                  <span>New 16:9 Slide</span>
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>Create 16:9 Slide</span>
                 </button>
               </div>
             ) : (
@@ -403,126 +406,124 @@ export function SlideNavigator({
                       onDragOver={handleSlideDragOver}
                       onDrop={(e) => handleSlideDrop(e, idx)}
                       onClick={() => onSelectSlide(slide.frameId)}
-                      className={`group relative flex flex-col p-1 rounded-lg cursor-pointer border transition-all select-none shrink-0 ${orientation === "horizontal" ? "w-28 h-24" : "w-full"
-            } ${isActive
-                ? "bg-indigo-50/90 dark:bg-indigo-950/60 border-indigo-400 dark:border-indigo-500 shadow-sm ring-1 ring-indigo-500/30"
-                : "bg-white/80 dark:bg-zinc-800/60 border-zinc-200/90 dark:border-zinc-800 hover:bg-zinc-100/90 dark:hover:bg-zinc-800/90"
-            } ${isDragging ? "opacity-30 scale-95" : "opacity-100"}`}
+                      className={`group relative flex flex-col p-1.5 rounded-[8px] cursor-pointer border transition-all duration-150 select-none shrink-0 ${orientation === "horizontal" ? "w-32 h-28" : "w-full"
+                        } ${isActive
+                          ? "bg-[#e3e2fe] border-[#6965db] ring-1 ring-[#6965db]/50"
+                          : "bg-[#f8f9fa] border-[#e9ecef] hover:bg-[#f1f3f5]"
+                        } ${isDragging ? "opacity-30 scale-95" : "opacity-100"}`}
                     >
-            {/* Compact Header inside slide card */}
-            <div className="flex items-center gap-1 w-full mb-0.5">
-              <div
-                className="cursor-grab active:cursor-grabbing text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 shrink-0"
-                title="Drag to reorder"
-              >
-                <GripVertical className="w-2.5 h-2.5" />
-              </div>
+                      {/* Card Header (Drag handle, Index, Title, Actions) */}
+                      <div className="flex items-center gap-1.5 w-full mb-1">
+                        <div
+                          className="cursor-grab active:cursor-grabbing text-[#adb5bd] hover:text-[#495057] shrink-0"
+                          title="Drag to reorder"
+                        >
+                          <GripVertical className="w-3 h-3" />
+                        </div>
 
-              <span
-                className={`text-[8px] font-bold w-3 h-3 rounded flex items-center justify-center shrink-0 ${
-                  isActive
-                    ? "bg-indigo-600 text-white"
-                    : "bg-zinc-200 dark:bg-zinc-700 text-zinc-600 dark:text-zinc-300"
-                }`}
-              >
-                {idx + 1}
-              </span>
+                        <span
+                          className={`text-[9px] font-bold w-3.5 h-3.5 rounded-[4px] flex items-center justify-center shrink-0 ${isActive
+                              ? "bg-[#6965db] text-white"
+                              : "bg-[#dee2e6] text-[#495057]"
+                            }`}
+                        >
+                          {idx + 1}
+                        </span>
 
                         <div className="flex-1 min-w-0">
                           <p
-                className = {`text-[10px] truncate ${isActive
-                    ? "text-indigo-900 dark:text-indigo-200 font-semibold"
-                    : "text-zinc-700 dark:text-zinc-300 font-medium"
-                  }`}
+                            className={`text-[10px] truncate ${isActive
+                                ? "text-[#343a40] font-semibold"
+                                : "text-[#495057] font-medium"
+                              }`}
                           >
-              {slide.name}
-            </p>
-          </div>
+                            {slide.name}
+                          </p>
+                        </div>
 
-          {/* Action Buttons */}
-          <div className="flex items-center opacity-0 group-hover:opacity-100 transition-opacity gap-0.5">
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                onDuplicateSlide(slide.frameId);
-              }}
-              title="Duplicate (Ctrl+D)"
-              aria-label="Duplicate slide"
-              className="p-0.5 rounded hover:bg-indigo-100 dark:hover:bg-indigo-900 text-zinc-500 hover:text-indigo-600 dark:hover:text-indigo-300"
-            >
-              <Copy className="w-2.5 h-2.5" />
-            </button>
-            <button
-              type="button"
-              disabled={idx === 0}
-              onClick={(e) => {
-                e.stopPropagation();
-                moveSlide(idx, idx - 1);
-              }}
-              title={orientation === "horizontal" ? "Move left" : "Move up"}
-              aria-label={orientation === "horizontal" ? "Move left" : "Move up"}
-              className="p-0.5 rounded hover:bg-zinc-200 dark:hover:bg-zinc-700 disabled:opacity-20 text-zinc-500"
-            >
-              {orientation === "horizontal" ? (
-                <ChevronLeft className="w-2.5 h-2.5" />
-              ) : (
-                <ChevronUp className="w-2.5 h-2.5" />
-              )}
-            </button>
-            <button
-              type="button"
-              disabled={idx === slides.length - 1}
-              onClick={(e) => {
-                e.stopPropagation();
-                moveSlide(idx, idx + 1);
-              }}
-              title={orientation === "horizontal" ? "Move right" : "Move down"}
-              aria-label={orientation === "horizontal" ? "Move right" : "Move down"}
-              className="p-0.5 rounded hover:bg-zinc-200 dark:hover:bg-zinc-700 disabled:opacity-20 text-zinc-500"
-            >
-              {orientation === "horizontal" ? (
-                <ChevronRight className="w-2.5 h-2.5" />
-              ) : (
-                <ChevronDown className="w-2.5 h-2.5" />
-              )}
-            </button>
-          </div>
-        </div>
+                        {/* Slide Card Actions on Hover */}
+                        <div className="flex items-center opacity-0 group-hover:opacity-100 transition-opacity gap-0.5">
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onDuplicateSlide(slide.frameId);
+                            }}
+                            title="Duplicate (Ctrl+D)"
+                            aria-label="Duplicate slide"
+                            className="p-0.5 rounded text-[#868e96] hover:text-[#6965db] hover:bg-[#e3e2fe] transition-colors"
+                          >
+                            <Copy className="w-2.5 h-2.5" />
+                          </button>
+                          <button
+                            type="button"
+                            disabled={idx === 0}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              moveSlide(idx, idx - 1);
+                            }}
+                            title={orientation === "horizontal" ? "Move left" : "Move up"}
+                            aria-label={orientation === "horizontal" ? "Move left" : "Move up"}
+                            className="p-0.5 rounded text-[#868e96] hover:text-[#212529] hover:bg-[#dee2e6] disabled:opacity-20 transition-colors"
+                          >
+                            {orientation === "horizontal" ? (
+                              <ChevronLeft className="w-2.5 h-2.5" />
+                            ) : (
+                              <ChevronUp className="w-2.5 h-2.5" />
+                            )}
+                          </button>
+                          <button
+                            type="button"
+                            disabled={idx === slides.length - 1}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              moveSlide(idx, idx + 1);
+                            }}
+                            title={orientation === "horizontal" ? "Move right" : "Move down"}
+                            aria-label={orientation === "horizontal" ? "Move right" : "Move down"}
+                            className="p-0.5 rounded text-[#868e96] hover:text-[#212529] hover:bg-[#dee2e6] disabled:opacity-20 transition-colors"
+                          >
+                            {orientation === "horizontal" ? (
+                              <ChevronRight className="w-2.5 h-2.5" />
+                            ) : (
+                              <ChevronDown className="w-2.5 h-2.5" />
+                            )}
+                          </button>
+                        </div>
+                      </div>
 
-        {/* Visual Thumbnail Preview */}
-          <div className="relative w-full flex-1 min-h-0 aspect-video rounded overflow-hidden bg-zinc-100 dark:bg-zinc-900 border border-zinc-200/50 dark:border-zinc-700/50 flex items-center justify-center">
-            {thumbUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={thumbUrl}
-                alt={slide.name}
-                className="w-full h-full object-contain pointer-events-none"
-                loading="lazy"
-              />
-            ) : (
-                <div className="flex flex-col items-center justify-center text-zinc-400">
-                  <ImageIcon className="w-3 h-3 opacity-40" />
-                </div>
+                      {/* 16:9 Thumbnail Canvas Box */}
+                      <div className="relative w-full flex-1 min-h-0 aspect-video rounded-[6px] overflow-hidden bg-white border border-[#e9ecef] flex items-center justify-center">
+                        {thumbUrl ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img
+                            src={thumbUrl}
+                            alt={slide.name}
+                            className="w-full h-full object-contain pointer-events-none"
+                            loading="lazy"
+                          />
+                        ) : (
+                          <div className="flex flex-col items-center justify-center text-[#adb5bd] gap-0.5">
+                            <ImageIcon className="w-3.5 h-3.5 opacity-50" />
+                          </div>
                         )}
-              </div>
+                      </div>
                     </div>
-          );
+                  );
                 })}
 
-          {/* Compact Add Slide Button */}
-          <button
-            type="button"
-            onClick={onAdd16x9Slide}
-            className={`border border-dashed border-zinc-300 dark:border-zinc-700 hover:border-indigo-500 dark:hover:border-indigo-400 rounded-lg text-zinc-600 dark:text-zinc-300 hover:text-indigo-600 dark:hover:text-indigo-400 flex items-center justify-center transition-colors shrink-0 ${
-              orientation === "horizontal"
-                ? "w-20 h-24 flex-col gap-1 text-[10px]"
-                : "w-full py-1.5 px-2 gap-1 text-[11px]"
-            }`}
-            title="Add 16:9 Slide"
-          >
+                {/* Excalidraw Styled Add Slide Card */}
+                <button
+                  type="button"
+                  onClick={onAdd16x9Slide}
+                  className={`border border-dashed border-[#ced4da] hover:border-[#6965db] rounded-[8px] text-[#495057] hover:text-[#6965db] hover:bg-[#f1f0ff] flex items-center justify-center transition-all shrink-0 ${orientation === "horizontal"
+                      ? "w-24 h-28 flex-col gap-1 text-[10px]"
+                      : "w-full py-2 px-2.5 gap-1.5 text-[11px]"
+                    }`}
+                  title="Add 16:9 Slide"
+                >
                   <Plus className="w-3.5 h-3.5" />
-                  <span>Add Slide</span>
+                  <span className="font-medium">Add Slide</span>
                 </button>
               </>
             )}

@@ -24,3 +24,41 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/* Slim sleek Excalidraw-native scrollbars */
+.excali-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: #d1d5db transparent;
+}
+
+.dark .excali-scrollbar {
+  scrollbar-color: #4b5563 transparent;
+}
+
+.excali-scrollbar::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+
+.excali-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.excali-scrollbar::-webkit-scrollbar-thumb {
+  background: #d1d5db;
+  border-radius: 9999px;
+  transition: background 0.2s ease;
+}
+
+.excali-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #9ca3af;
+}
+
+.dark .excali-scrollbar::-webkit-scrollbar-thumb {
+  background: #4b5563;
+}
+
+.dark .excali-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #6b7280;
+}
+
