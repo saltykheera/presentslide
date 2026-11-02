@@ -134,7 +134,7 @@ export function SlideNavigator({
   };
 
   // Keyboard shortcuts:
-  // - Ctrl+M or Cmd+M / Shift+Cmd+N: New Slide
+  // - Ctrl+N or Cmd+N (also Ctrl+M, Cmd+M, Shift+Cmd+N): New Slide
   // - Ctrl+D or Cmd+D: Duplicate active slide
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -150,10 +150,10 @@ export function SlideNavigator({
 
       const isModifier = e.ctrlKey || e.metaKey;
 
-      // New slide: Ctrl+M / Cmd+M (standard PowerPoint / Keynote) or Cmd+Shift+N / Ctrl+Shift+N
+      // New slide: Ctrl+N / Cmd+N (also Ctrl+M / Cmd+M or Shift+Cmd+N)
       if (
-        (isModifier && !e.shiftKey && e.key.toLowerCase() === "m") ||
-        (isModifier && e.shiftKey && e.key.toLowerCase() === "n")
+        (isModifier && e.key.toLowerCase() === "n") ||
+        (isModifier && !e.shiftKey && e.key.toLowerCase() === "m")
       ) {
         e.preventDefault();
         onAdd16x9Slide();
@@ -300,7 +300,7 @@ export function SlideNavigator({
               <button
                 type="button"
                 onClick={onAdd16x9Slide}
-                title="Add 16:9 Frame (Ctrl+M / ⌘M)"
+                title="Add 16:9 Frame (Ctrl+N / ⌘N)"
                 aria-label="Add 16:9 Presentation Frame"
                 className="p-1 rounded text-zinc-500 hover:text-indigo-600 dark:hover:text-indigo-300 hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors"
               >

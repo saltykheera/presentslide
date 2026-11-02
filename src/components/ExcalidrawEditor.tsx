@@ -527,6 +527,45 @@ export function ExcalidrawEditor() {
     onEmptyPresentation: handleEmptyPresentation,
   });
 
+  // Global keyboard shortcuts:
+  // - Ctrl+N or Cmd+N: New Slide
+  // - Ctrl+P or Cmd+P or Alt+P: Toggle/Start Presentation preview
+  useEffect(() => {
+    const handleGlobalKeyDown = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement | null;
+      if (
+        target &&
+        (target.tagName === "INPUT" ||
+          target.tagName === "TEXTAREA" ||
+          target.isContentEditable)
+      ) {
+        return;
+      }
+
+      const isModifier = e.ctrlKey || e.metaKey;
+
+      // Ctrl+N / Cmd+N -> Create new 16:9 slide
+      if (isModifier && e.key.toLowerCase() === "n") {
+        e.preventDefault();
+        handleAdd16x9Slide();
+        return;
+      }
+
+      // Ctrl+P / Cmd+P or Alt+P -> Toggle/Start presentation preview
+      if ((isModifier && e.key.toLowerCase() === "p") || (e.altKey && e.key.toLowerCase() === "p")) {
+        e.preventDefault();
+        if (isPresenting) {
+          exitPresentation();
+        } else {
+          startPresentation();
+        }
+      }
+    };
+
+    window.addEventListener("keydown", handleGlobalKeyDown);
+    return () => window.removeEventListener("keydown", handleGlobalKeyDown);
+  }, [handleAdd16x9Slide, isPresenting, startPresentation, exitPresentation]);
+
   // Ensure frame outlines and names are restored if presentation exits
   useEffect(() => {
     if (!isPresenting && excalidrawAPI) {
@@ -615,7 +654,7 @@ export function ExcalidrawEditor() {
           <button
             type="button"
             onClick={startPresentation}
-            title="Start Presentation"
+            title="Start Presentation (Ctrl+P / ⌘P / Alt+P)"
             aria-label="Start Presentation"
             className="fixed bottom-6 right-6 z-30 w-14 h-14 rounded-full bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white shadow-xl hover:shadow-2xl flex items-center justify-center transition-all duration-200 border border-indigo-400/30 focus:outline-none focus:ring-4 focus:ring-indigo-500/30 group"
           >
