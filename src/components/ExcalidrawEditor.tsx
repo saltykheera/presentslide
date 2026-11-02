@@ -131,38 +131,40 @@ export function ExcalidrawEditor() {
     [excalidrawAPI, generateThumbnails]
   );
 
+  // Initial data loaded from localStorage before Excalidraw mounts
+  const initialData = useMemo(() => {
+    if (typeof window === "undefined") return undefined;
+    const saved = loadFromStorage();
+    if (!saved || !saved.elements || saved.elements.length === 0) return undefined;
+
+    return {
+      elements: saved.elements,
+      appState: saved.appState
+        ? {
+          viewBackgroundColor: saved.appState.viewBackgroundColor || "#ffffff",
+        }
+        : undefined,
+      files: saved.files as unknown as NonNullable<React.ComponentProps<typeof Excalidraw>["initialData"]> extends { files?: infer F } ? F : undefined,
+      slideOrder: saved.slideOrder,
+    };
+  }, []);
+
   // Stable callback for initial Excalidraw API binding
   const handleExcalidrawAPI = useCallback(
     (api: ExcalidrawImperativeAPI) => {
       setExcalidrawAPI(api);
 
-      // Load saved project from localStorage if exists
-      const saved = loadFromStorage();
-      if (saved && saved.elements && saved.elements.length > 0) {
-        api.updateScene({
-          elements: saved.elements,
-          appState: saved.appState
-            ? {
-                viewBackgroundColor: saved.appState.viewBackgroundColor || "#ffffff",
-              }
-            : undefined,
-        });
-        if (saved.files) {
-          api.addFiles(Object.values(saved.files) as Parameters<ExcalidrawImperativeAPI["addFiles"]>[0]);
-        }
-        if (saved.slideOrder) {
-          setCustomSlideOrder(saved.slideOrder);
-          updateSlidesIfChanged(saved.elements, saved.slideOrder, api);
-          return;
-        }
-        updateSlidesIfChanged(saved.elements, [], api);
-        return;
+      if (initialData?.slideOrder && initialData.slideOrder.length > 0) {
+        setCustomSlideOrder(initialData.slideOrder);
       }
 
-      const elements = api.getSceneElements();
-      updateSlidesIfChanged(elements, customSlideOrder, api);
+      // Defer scene elements inspection until Excalidraw is fully mounted
+      setTimeout(() => {
+        const elements = api.getSceneElements();
+        updateSlidesIfChanged(elements, initialData?.slideOrder || customSlideOrder, api);
+      }, 0);
     },
-    [updateSlidesIfChanged, customSlideOrder]
+    [updateSlidesIfChanged, initialData, customSlideOrder]
   );
 
   // Stable onChange listener with auto-save debounced to localStorage
@@ -319,8 +321,24 @@ export function ExcalidrawEditor() {
         (el) => el.frameId === frameId && !("isDeleted" in el && el.isDeleted)
       );
 
-      const offsetX = targetFrame.width + SLIDE_GAP;
-      const offsetY = 0;
+      // Stack duplicate slides vertically directly below the source slide or its existing column stack
+      const existingFrames = elements.filter(
+        (el) => isFrame(el) && !("isDeleted" in el && el.isDeleted)
+      );
+
+      // Find all frames currently in the same vertical column (sharing horizontal bounds with source slide)
+      const columnFrames = existingFrames.filter(
+        (f) => Math.abs(f.x - targetFrame.x) < 50
+      );
+
+      const maxBottomInColumn = columnFrames.length > 0
+        ? Math.max(...columnFrames.map((f) => f.y + f.height))
+        : targetFrame.y + targetFrame.height;
+
+      const newX = targetFrame.x;
+      const newY = maxBottomInColumn + SLIDE_GAP;
+      const deltaX = newX - targetFrame.x;
+      const deltaY = newY - targetFrame.y;
 
       const newFrameId = `frame_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
       const timestamp = Date.now();
@@ -328,8 +346,8 @@ export function ExcalidrawEditor() {
       const duplicatedFrame: ExcalidrawElement = {
         ...targetFrame,
         id: newFrameId,
-        x: targetFrame.x + offsetX,
-        y: targetFrame.y + offsetY,
+        x: newX,
+        y: newY,
         name: targetFrame.name ? `${targetFrame.name} (Copy)` : `Slide (Copy)`,
         version: targetFrame.version + 1,
         versionNonce: Math.floor(Math.random() * 1000000),
@@ -343,8 +361,8 @@ export function ExcalidrawEditor() {
       const duplicatedChildren: ExcalidrawElement[] = childElements.map((child) => ({
         ...child,
         id: `el_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
-        x: child.x + offsetX,
-        y: child.y + offsetY,
+        x: child.x + deltaX,
+        y: child.y + deltaY,
         frameId: newFrameId,
         version: child.version + 1,
         versionNonce: Math.floor(Math.random() * 1000000),
@@ -611,6 +629,7 @@ export function ExcalidrawEditor() {
       <div className="relative w-full h-full">
         <Excalidraw
           excalidrawAPI={handleExcalidrawAPI}
+          initialData={initialData}
           onChange={handleSceneChange}
           viewModeEnabled={isPresenting}
           zenModeEnabled={isPresenting}

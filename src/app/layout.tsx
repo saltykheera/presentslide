@@ -13,8 +13,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "ExcaliPrint - Canvas Slide Presentations",
-  description: "Excalidraw-based presentation tool with frame slides, smooth navigation, and auto-save.",
+  title: "presentslide - Canvas Slide Presentations",
+  description: "Presentation tool with Excalidraw frame slides, smooth navigation, and auto-save.",
   icons: {
     icon: [
       { url: "/icon.png", type: "image/png" },
