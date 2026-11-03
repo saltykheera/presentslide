@@ -3,6 +3,12 @@
 :root {
   --background: #ffffff;
   --foreground: #171717;
+  --eb-border: #e0e0e0;
+  --eb-island: #ffffff;
+  --eb-text: #1b1b1f;
+  --eb-primary: #6965db;
+  --eb-primary-hover: #5b57d1;
+  --eb-primary-active: #4a47b1;
 }
 
 @theme inline {
@@ -61,4 +67,66 @@ body {
 .dark .excali-scrollbar::-webkit-scrollbar-thumb:hover {
   background: #6b7280;
 }
+
+/* Excaliboard / presentslide button styling */
+.eb-btn {
+  border: 1px solid var(--eb-border);
+  background: var(--eb-island);
+  height: 36px;
+  color: var(--eb-text);
+  cursor: pointer;
+  white-space: nowrap;
+  border-radius: 8px;
+  justify-content: center;
+  align-items: center;
+  gap: 6px;
+  padding: 0 14px;
+  font-size: 14px;
+  font-weight: 600;
+  display: inline-flex;
+  transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+.eb-btn:not(.eb-btn-primary):hover {
+  background: #f8f9fa;
+  border-color: #ced4da;
+}
+
+.eb-btn:not(.eb-btn-primary):active {
+  background: #f1f3f5;
+}
+
+/* Primary Button MUST be #6965db with white text */
+.eb-btn.eb-btn-primary,
+.eb-btn-primary {
+  background-color: #6965db !important;
+  background: #6965db !important;
+  color: #ffffff !important;
+  border: 1px solid #6965db !important;
+  border-color: #6965db !important;
+}
+
+.eb-btn.eb-btn-primary:hover,
+.eb-btn-primary:hover {
+  background-color: #5b57d1 !important;
+  background: #5b57d1 !important;
+  border-color: #5b57d1 !important;
+  color: #ffffff !important;
+}
+
+.eb-btn.eb-btn-primary:active,
+.eb-btn-primary:active {
+  background-color: #4a47b1 !important;
+  background: #4a47b1 !important;
+  border-color: #4a47b1 !important;
+  color: #ffffff !important;
+}
+
+.eb-btn-icon {
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  flex-shrink: 0;
+}
+
 

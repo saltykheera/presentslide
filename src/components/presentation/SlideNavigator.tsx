@@ -1,24 +1,24 @@
 "use client";
 
-import React, { useState, useRef, useEffect, useCallback } from "react";
+import React, { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import type { PresentationSlide } from "@/lib/presentation/presentationTypes";
 import {
-  GripVertical,
-  ChevronUp,
-  ChevronDown,
-  ChevronLeft,
-  ChevronRight,
-  Minus,
-  Maximize2,
-  Copy,
+  Search,
   Plus,
-  Image as ImageIcon,
+  ChevronDown,
+  ChevronRight,
+  Monitor,
+  Folder,
+  MoreHorizontal,
+  PanelLeftClose,
+  PanelLeftOpen,
+  Copy,
+  ChevronUp,
   Download,
   Upload,
-  Check,
-  LayoutGrid,
-  Columns3,
-  Dock,
+  GripVertical,
+  ImageIcon,
+  Command,
 } from "lucide-react";
 
 interface SlideNavigatorProps {
@@ -34,6 +34,24 @@ interface SlideNavigatorProps {
   onImportProject?: (file: File) => void;
 }
 
+// Relative time formatting helper (e.g. "Just now", "2m ago", "1h ago", "26 Oct")
+function formatTimeAgo(timestamp?: number): string {
+  if (!timestamp) return "Just now";
+  const now = Date.now();
+  const diffSec = Math.floor((now - timestamp) / 1000);
+
+  if (diffSec < 60) return "Just now";
+  const diffMin = Math.floor(diffSec / 60);
+  if (diffMin < 60) return `${diffMin}m ago`;
+  const diffHours = Math.floor(diffMin / 60);
+  if (diffHours < 24) return `${diffHours}h ago`;
+  const diffDays = Math.floor(diffHours / 24);
+  if (diffDays < 7) return `${diffDays}d ago`;
+
+  const date = new Date(timestamp);
+  return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+}
+
 export function SlideNavigator({
   slides,
   activeSlideId,
@@ -46,95 +64,59 @@ export function SlideNavigator({
   onExportProject,
   onImportProject,
 }: SlideNavigatorProps) {
-  // Minimization state
-  const [isMinimized, setIsMinimized] = useState(false);
-
-  // Orientation state: "vertical" (top-down) or "horizontal" (left-to-right / filmstrip)
-  const [orientation, setOrientation] = useState<"vertical" | "horizontal">(() => {
+  // Drawer open / collapsed state (persisted)
+  const [isOpen, setIsOpen] = useState<boolean>(() => {
     if (typeof window !== "undefined") {
-      const stored = localStorage.getItem("excaliprint_slide_nav_orientation");
-      if (stored === "horizontal" || stored === "vertical") return stored;
+      const stored = localStorage.getItem("presentslide_nav_open");
+      if (stored !== null) return stored === "true";
     }
-    return "vertical";
+    return true;
   });
 
-  const toggleOrientation = useCallback(() => {
-    setOrientation((prev) => {
-      const next = prev === "vertical" ? "horizontal" : "vertical";
+  const toggleOpen = useCallback(() => {
+    setIsOpen((prev) => {
+      const next = !prev;
       if (typeof window !== "undefined") {
-        localStorage.setItem("excaliprint_slide_nav_orientation", next);
+        localStorage.setItem("presentslide_nav_open", String(next));
       }
       return next;
     });
   }, []);
 
-  // Position state (draggable modal)
-  const [position, setPosition] = useState<{ x: number; y: number }>(() => {
-    if (typeof window !== "undefined") {
-      const stored = localStorage.getItem("excaliprint_slide_nav_pos");
-      if (stored) {
-        try {
-          return JSON.parse(stored);
-        } catch {}
-      }
-    }
-    return { x: 16, y: 16 };
-  });
+  // Section collapse state (like folder accordion in screenshot)
+  const [isSectionOpen, setIsSectionOpen] = useState(true);
 
-  // Dock to bottom helper for horizontal view
-  const dockToBottom = useCallback(() => {
-    if (typeof window === "undefined") return;
-    setOrientation("horizontal");
-    localStorage.setItem("excaliprint_slide_nav_orientation", "horizontal");
-    const bottomPos = {
-      x: Math.max(16, (window.innerWidth - 640) / 2),
-      y: Math.max(16, window.innerHeight - 130),
-    };
-    setPosition(bottomPos);
-    localStorage.setItem("excaliprint_slide_nav_pos", JSON.stringify(bottomPos));
-  }, []);
+  // Search filter query
+  const [searchQuery, setSearchQuery] = useState("");
+
+  // More menu dropdown state
+  const [isMoreMenuOpen, setIsMoreMenuOpen] = useState(false);
+  const moreMenuRef = useRef<HTMLDivElement>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const isDraggingModalRef = useRef(false);
-  const dragStartOffsetRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
   const [draggedSlideIndex, setDraggedSlideIndex] = useState<number | null>(null);
 
-  // Handle modal dragging
-  const handleModalHeaderMouseDown = (e: React.MouseEvent) => {
-    if ((e.target as HTMLElement).closest("button")) return;
-
-    isDraggingModalRef.current = true;
-    dragStartOffsetRef.current = {
-      x: e.clientX - position.x,
-      y: e.clientY - position.y,
+  // Close more menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (moreMenuRef.current && !moreMenuRef.current.contains(e.target as HTMLElement)) {
+        setIsMoreMenuOpen(false);
+      }
     };
+    if (isMoreMenuOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [isMoreMenuOpen]);
 
-    const handleMouseMove = (moveEvent: MouseEvent) => {
-      if (!isDraggingModalRef.current) return;
-      const nextX = Math.max(8, Math.min(window.innerWidth - 80, moveEvent.clientX - dragStartOffsetRef.current.x));
-      const nextY = Math.max(8, Math.min(window.innerHeight - 80, moveEvent.clientY - dragStartOffsetRef.current.y));
-      setPosition({ x: nextX, y: nextY });
-    };
+  // Filter slides by search query
+  const filteredSlides = useMemo(() => {
+    if (!searchQuery.trim()) return slides;
+    const q = searchQuery.toLowerCase();
+    return slides.filter((s) => s.name.toLowerCase().includes(q));
+  }, [slides, searchQuery]);
 
-    const handleMouseUp = () => {
-      isDraggingModalRef.current = false;
-      window.removeEventListener("mousemove", handleMouseMove);
-      window.removeEventListener("mouseup", handleMouseUp);
-      setPosition((curr) => {
-        if (typeof window !== "undefined") {
-          localStorage.setItem("excaliprint_slide_nav_pos", JSON.stringify(curr));
-        }
-        return curr;
-      });
-    };
-
-    window.addEventListener("mousemove", handleMouseMove);
-    window.addEventListener("mouseup", handleMouseUp);
-  };
-
-  // Keyboard shortcuts:
-  // - Ctrl+N or Cmd+N (also Ctrl+M, Cmd+M): New Slide
-  // - Ctrl+D or Cmd+D: Duplicate active slide
+  // Keyboard shortcuts: Ctrl+N / Cmd+N (new slide), Ctrl+D / Cmd+D (duplicate)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       const target = e.target as HTMLElement | null;
@@ -149,7 +131,6 @@ export function SlideNavigator({
 
       const isModifier = e.ctrlKey || e.metaKey;
 
-      // New slide: Ctrl+N / Cmd+N (also Ctrl+M / Cmd+M)
       if (
         (isModifier && e.key.toLowerCase() === "n") ||
         (isModifier && !e.shiftKey && e.key.toLowerCase() === "m")
@@ -159,7 +140,6 @@ export function SlideNavigator({
         return;
       }
 
-      // Duplicate slide: Ctrl+D / Cmd+D
       if (isModifier && !e.shiftKey && e.key.toLowerCase() === "d") {
         e.preventDefault();
         const targetSlideId = activeSlideId || (slides.length > 0 ? slides[0].frameId : null);
@@ -211,191 +191,235 @@ export function SlideNavigator({
     if (files && files[0] && onImportProject) {
       onImportProject(files[0]);
     }
-    // reset input
     e.target.value = "";
   };
 
-  return (
-    <div
-      style={{
-        left: `${position.x}px`,
-        top: `${position.y}px`,
-        boxShadow:
-          "0px 0px 1px 0px rgba(0, 0, 0, 0.17), 0px 0px 3px 0px rgba(0, 0, 0, 0.08), 0px 7px 14px 0px rgba(0, 0, 0, 0.08)",
-      }}
-      className={`fixed z-30 select-none rounded-[10px] bg-[#ffffff] border border-[#e0e0e0] overflow-hidden transition-all duration-150 ${
-        isMinimized
-          ? "w-auto"
-          : orientation === "horizontal"
-          ? "w-[min(90vw,720px)] max-h-44"
-          : "w-56 max-h-[calc(100vh-2.5rem)]"
-      }`}
-      aria-label="Slides Navigator"
-    >
-      <div className="flex flex-col h-full text-xs font-sans text-[#1b1b1f]">
-        {/* Hidden File Input for Importing .excalidraw files */}
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept=".excalidraw,.json"
-          onChange={handleFileInputChange}
-          className="hidden"
-        />
-
-        {/* Clean Excalidraw-White Island Header */}
-        <div
-          onMouseDown={handleModalHeaderMouseDown}
-          className="flex items-center justify-between px-2.5 py-2 border-b border-[#ececf4] shrink-0 bg-[#f9f9fb] cursor-grab active:cursor-grabbing"
-          title="Drag header to position slides navigator"
+  if (!isOpen) {
+    return (
+      <aside
+        className="relative z-20 w-11 shrink-0 h-full bg-white border-r border-[#e0e0e0] flex flex-col items-center py-3 gap-2 select-none"
+        aria-label="Collapsed Slides Rail"
+      >
+        <button
+          type="button"
+          onClick={toggleOpen}
+          title="Expand slides sidebar"
+          aria-label="Expand slides sidebar"
+          className="group w-8 h-8 rounded-[8px] flex items-center justify-center text-[#6b7280] hover:text-[#111827] hover:bg-[#f3f4f6] transition-colors"
         >
-          {/* Left badge & counter */}
-          <div className="flex items-center gap-1.5">
-            <span className="px-1.5 py-0.5 rounded-full bg-[#ececf4] text-[10px] font-semibold text-[#495057]">
-              {slides.length}
-            </span>
-            {isSaved && (
-              <span
-                className="flex items-center text-[10px] text-[#0fb884] gap-0.5"
-                title="Saved to local storage"
+          <PanelLeftOpen className="w-[18px] h-[18px]" strokeWidth={1.6} />
+        </button>
+        <button
+          type="button"
+          onClick={onAdd16x9Slide}
+          title="Add new 16:9 slide (Ctrl+N / ⌘N)"
+          aria-label="Add slide"
+          className="group w-8 h-8 rounded-[8px] flex items-center justify-center text-[#6b7280] hover:text-[#111827] hover:bg-[#f3f4f6] transition-colors"
+        >
+          <Plus className="w-[18px] h-[18px]" strokeWidth={1.6} />
+        </button>
+      </aside>
+    );
+  }
+
+  return (
+    <>
+      {/* Hidden File Input for Importing .excalidraw files */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept=".excalidraw,.json"
+        onChange={handleFileInputChange}
+        className="hidden"
+      />
+
+      {/* Slide Navigator Sidebar Drawer on the side of the canvas */}
+      <aside
+        className="relative z-20 w-72 shrink-0 h-full bg-white border-r border-[var(--eb-border)] flex flex-col font-sans select-none overflow-hidden"
+        aria-label="Presentation Slide Navigator"
+      >
+        {/* Top App Header (Brand Logo, Name, Command icon, Collapse Toggle) */}
+        <div className="flex items-center justify-between px-4 py-3.5 border-b border-[#f3f4f6] shrink-0">
+          <div className="flex items-center gap-2.5">
+            <div className="w-6 h-6 rounded-[6px] bg-[#6965db] flex items-center justify-center text-white shadow-xs">
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="w-3.5 h-3.5"
               >
-                <Check className="w-3 h-3" />
-              </span>
-            )}
+                <path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242" />
+                <path d="m8 17 4-4 4 4" />
+              </svg>
+            </div>
+            <span
+              className="text-[18px] font-bold tracking-tight text-[#111827]"
+              style={{ fontFamily: "'Virgil', cursive, system-ui, sans-serif" }}
+            >
+              presentslide
+            </span>
           </div>
 
-          {/* Right Toolbar Actions */}
-          <div className="flex items-center gap-0.5">
-            {/* Orientation Toggle */}
-            {!isMinimized && (
-              <button
-                type="button"
-                onClick={toggleOrientation}
-                title={
-                  orientation === "vertical"
-                    ? "Switch to horizontal filmstrip (bottom dock)"
-                    : "Switch to vertical panel"
-                }
-                aria-label="Toggle layout orientation"
-                className="p-1 rounded-[6px] text-[#495057] hover:bg-[#ececf4] hover:text-[#6965db] transition-colors"
-              >
-                {orientation === "vertical" ? (
-                  <Columns3 className="w-3.5 h-3.5" />
-                ) : (
-                  <LayoutGrid className="w-3.5 h-3.5" />
-                )}
-              </button>
-            )}
-
-            {/* Quick dock to bottom button in horizontal mode */}
-            {!isMinimized && orientation === "horizontal" && (
-              <button
-                type="button"
-                onClick={dockToBottom}
-                title="Dock to bottom center"
-                aria-label="Dock to bottom"
-                className="p-1 rounded-[6px] text-[#495057] hover:bg-[#ececf4] hover:text-[#6965db] transition-colors"
-              >
-                <Dock className="w-3.5 h-3.5" />
-              </button>
-            )}
-
-            {/* Add 16:9 Slide Button */}
+          <div className="flex items-center gap-1">
             <button
               type="button"
-              onClick={onAdd16x9Slide}
-              title="Add 16:9 Slide (Ctrl+N / ⌘N)"
-              aria-label="Add 16:9 Slide"
-              className="p-1 rounded-[6px] text-[#495057] hover:bg-[#ececf4] hover:text-[#6965db] transition-colors"
+              title="Keyboard shortcuts (Ctrl+N / Ctrl+P)"
+              aria-label="Keyboard shortcuts"
+              className="p-1.5 rounded-[6px] text-[#6b7280] hover:text-[#111827] hover:bg-[#f3f4f6] transition-colors"
             >
-              <Plus className="w-3.5 h-3.5" />
+              <Command className="w-4 h-4" />
             </button>
-
-            {/* Duplicate button for active slide */}
-            {!isMinimized && (
-              <button
-                type="button"
-                onClick={() => {
-                  const targetSlideId = activeSlideId || (slides.length > 0 ? slides[0].frameId : null);
-                  if (targetSlideId) onDuplicateSlide(targetSlideId);
-                }}
-                disabled={slides.length === 0}
-                title="Duplicate slide (Ctrl+D / ⌘D)"
-                aria-label="Duplicate slide"
-                className="p-1 rounded-[6px] text-[#495057] hover:bg-[#ececf4] hover:text-[#6965db] transition-colors disabled:opacity-30 disabled:pointer-events-none"
-              >
-                <Copy className="w-3.5 h-3.5" />
-              </button>
-            )}
-
-            {/* Export File Button */}
-            {!isMinimized && onExportProject && (
-              <button
-                type="button"
-                onClick={onExportProject}
-                title="Export .excalidraw project"
-                aria-label="Export project"
-                className="p-1 rounded-[6px] text-[#495057] hover:bg-[#ececf4] hover:text-[#6965db] transition-colors"
-              >
-                <Download className="w-3.5 h-3.5" />
-              </button>
-            )}
-
-            {/* Import File Button */}
-            {!isMinimized && onImportProject && (
-              <button
-                type="button"
-                onClick={() => fileInputRef.current?.click()}
-                title="Import .excalidraw project"
-                aria-label="Import project"
-                className="p-1 rounded-[6px] text-[#495057] hover:bg-[#ececf4] hover:text-[#6965db] transition-colors"
-              >
-                <Upload className="w-3.5 h-3.5" />
-              </button>
-            )}
-
-            <div className="w-[1px] h-3 bg-[#e0e0e0] mx-0.5" />
-
-            {/* Minimize / Expand Toggle */}
             <button
               type="button"
-              onClick={() => setIsMinimized(!isMinimized)}
-              title={isMinimized ? "Expand" : "Minimize"}
-              aria-label={isMinimized ? "Expand" : "Minimize"}
-              className="p-1 rounded-[6px] text-[#495057] hover:bg-[#ececf4] transition-colors"
+              onClick={toggleOpen}
+              title="Collapse sidebar"
+              aria-label="Collapse sidebar"
+              className="p-1.5 rounded-[6px] text-[#6b7280] hover:text-[#111827] hover:bg-[#f3f4f6] transition-colors"
             >
-              {isMinimized ? (
-                <Maximize2 className="w-3.5 h-3.5" />
-              ) : (
-                <Minus className="w-3.5 h-3.5" />
-              )}
+              <PanelLeftClose className="w-4 h-4" />
             </button>
           </div>
         </div>
 
-        {/* Body Slide List in White Island theme */}
-        {!isMinimized && (
-          <div
-            className={`flex-1 p-2 bg-[#ffffff] excali-scrollbar ${
-              orientation === "horizontal"
-                ? "flex flex-row items-center gap-2 overflow-x-auto overflow-y-hidden max-h-36 py-2"
-                : "flex flex-col overflow-y-auto space-y-2 max-h-[68vh]"
-            }`}
+        {/* Search Bar */}
+        <div className="px-3.5 pt-3 pb-2 shrink-0">
+          <div className="relative flex items-center w-full">
+            <Search className="absolute left-3 w-4 h-4 text-[#9ca3af] pointer-events-none" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search names & contents"
+              className="w-full h-[36px] pl-9 pr-3 rounded-[8px] bg-white border border-[var(--eb-border)] focus:border-[#6965db] focus:ring-2 focus:ring-[#6965db]/20 outline-none text-[#1b1b1f] text-[14px] placeholder-[#9ca3af] transition-all"
+            />
+          </div>
+        </div>
+
+        {/* Action Buttons Row ("+ New slide", Copy, More options) */}
+        <div className="px-3.5 py-1.5 flex items-center gap-2 shrink-0">
+          {/* Main Primary Button: "+ New slide" with color #6965db and border-radius 8px */}
+          <button
+            type="button"
+            onClick={onAdd16x9Slide}
+            title="Create new 16:9 slide (Ctrl+N / ⌘N)"
+            className="eb-btn eb-btn-primary flex-1 !bg-[#6965db] hover:!bg-[#5b57d1] active:!bg-[#4a47b1] !text-white !border-[#6965db]"
+            style={{
+              backgroundColor: "#6965db",
+              borderColor: "#6965db",
+              color: "#ffffff",
+            }}
           >
-            {slides.length === 0 ? (
-              <div className="p-4 text-center text-[11px] text-[#868e96] leading-normal flex flex-col items-center justify-center gap-2 w-full">
-                <span>No frames on canvas yet.</span>
-                <button
-                  type="button"
-                  onClick={onAdd16x9Slide}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-[8px] bg-[#6965db] hover:bg-[#5753d0] active:bg-[#4a47b1] text-white text-[11px] font-medium shadow-sm transition-colors"
-                >
-                  <Plus className="w-3.5 h-3.5" />
-                  <span>Create 16:9 Slide</span>
-                </button>
+            <Plus className="w-4 h-4 stroke-[2.5] text-white" />
+            <span className="text-white">New slide</span>
+          </button>
+
+          {/* Quick Duplicate / Copy Button with border-radius 8px */}
+          <button
+            type="button"
+            onClick={() => {
+              const targetSlideId = activeSlideId || (slides.length > 0 ? slides[0].frameId : null);
+              if (targetSlideId) onDuplicateSlide(targetSlideId);
+            }}
+            disabled={slides.length === 0}
+            title="Duplicate active slide (Ctrl+D / ⌘D)"
+            aria-label="Duplicate active slide"
+            className="eb-btn eb-btn-icon disabled:opacity-40"
+          >
+            <Copy className="w-4 h-4 text-[#495057]" />
+          </button>
+
+          {/* Settings / More Options Button with border-radius 8px */}
+          <div className="relative" ref={moreMenuRef}>
+            <button
+              type="button"
+              onClick={() => setIsMoreMenuOpen(!isMoreMenuOpen)}
+              title="More project options"
+              aria-label="More options"
+              className="eb-btn eb-btn-icon"
+            >
+              <MoreHorizontal className="w-4 h-4 text-[#495057]" />
+            </button>
+
+            {isMoreMenuOpen && (
+              <div className="absolute right-0 top-full mt-1.5 w-48 rounded-[8px] bg-white border border-[var(--eb-border)] shadow-xl py-1 z-40 text-[13px] text-[#1b1b1f]">
+                {onExportProject && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsMoreMenuOpen(false);
+                      onExportProject();
+                    }}
+                    className="w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-[#f8f9fa] hover:text-[#6965db] transition-colors"
+                  >
+                    <Download className="w-4 h-4 text-[#6b7280]" />
+                    <span>Export project</span>
+                  </button>
+                )}
+                {onImportProject && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsMoreMenuOpen(false);
+                      fileInputRef.current?.click();
+                    }}
+                    className="w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-[#f8f9fa] hover:text-[#6965db] transition-colors"
+                  >
+                    <Upload className="w-4 h-4 text-[#6b7280]" />
+                    <span>Import project</span>
+                  </button>
+                )}
               </div>
-            ) : (
-              <>
-                {slides.map((slide, idx) => {
+            )}
+          </div>
+        </div>
+
+        {/* Divider */}
+        <div className="h-[1px] bg-[#f0f0f0] my-2 shrink-0" />
+
+        {/* Slides Section Header Accordion */}
+        <div className="flex-1 overflow-hidden flex flex-col min-h-0">
+          <div
+            onClick={() => setIsSectionOpen(!isSectionOpen)}
+            className="px-3.5 py-1.5 flex items-center justify-between text-[14px] font-medium text-[#1b1b1f] hover:text-[#6965db] cursor-pointer shrink-0 select-none"
+          >
+            <div className="flex items-center gap-2">
+              {isSectionOpen ? (
+                <ChevronDown className="w-4 h-4 text-[#868e96]" />
+              ) : (
+                <ChevronRight className="w-4 h-4 text-[#868e96]" />
+              )}
+              <Monitor className="w-4 h-4 text-[#495057]" />
+              <span>Slides in order</span>
+            </div>
+            <span className="text-[13px] text-[#868e96]">
+              {filteredSlides.length}
+            </span>
+          </div>
+
+          {/* Slides List Scroll Area */}
+          {isSectionOpen && (
+            <div className="flex-1 overflow-y-auto px-2.5 py-1 space-y-1 excali-scrollbar">
+              {filteredSlides.length === 0 ? (
+                <div className="p-6 text-center text-xs text-[#9ca3af] leading-relaxed flex flex-col items-center justify-center gap-2">
+                  <Folder className="w-8 h-8 text-[#d1d5db] stroke-1" />
+                  <span>
+                    {searchQuery ? "No slides match your search" : "No presentation slides yet"}
+                  </span>
+                  {!searchQuery && (
+                    <button
+                      type="button"
+                      onClick={onAdd16x9Slide}
+                      className="mt-1 px-3 py-1.5 rounded-[8px] bg-[#f3f4f6] hover:bg-[#e5e7eb] text-[#374151] text-xs font-medium transition-colors"
+                    >
+                      + Add first slide
+                    </button>
+                  )}
+                </div>
+              ) : (
+                filteredSlides.map((slide, idx) => {
                   const isActive = activeSlideId === slide.frameId;
                   const isDragging = draggedSlideIndex === idx;
                   const thumbUrl = thumbnails[slide.frameId];
@@ -408,98 +432,14 @@ export function SlideNavigator({
                       onDragOver={handleSlideDragOver}
                       onDrop={(e) => handleSlideDrop(e, idx)}
                       onClick={() => onSelectSlide(slide.frameId)}
-                      className={`group relative flex flex-col p-1.5 rounded-[8px] cursor-pointer border transition-all duration-150 select-none shrink-0 ${
-                        orientation === "horizontal" ? "w-32 h-28" : "w-full"
-                      } ${
+                      className={`group relative flex items-center gap-3 p-2 rounded-[8px] cursor-pointer transition-all duration-150 select-none ${
                         isActive
-                          ? "bg-[#e3e2fe] border-[#6965db] ring-1 ring-[#6965db]/50"
-                          : "bg-[#f8f9fa] border-[#e9ecef] hover:bg-[#f1f3f5]"
+                          ? "bg-[#e3e2fe] text-[#2b2a33]"
+                          : "hover:bg-[#f8f9fa] text-[#1b1b1f]"
                       } ${isDragging ? "opacity-30 scale-95" : "opacity-100"}`}
                     >
-                      {/* Card Header (Drag handle, Index, Title, Actions) */}
-                      <div className="flex items-center gap-1.5 w-full mb-1">
-                        <div
-                          className="cursor-grab active:cursor-grabbing text-[#adb5bd] hover:text-[#495057] shrink-0"
-                          title="Drag to reorder"
-                        >
-                          <GripVertical className="w-3 h-3" />
-                        </div>
-
-                        <span
-                          className={`text-[9px] font-bold w-3.5 h-3.5 rounded-[4px] flex items-center justify-center shrink-0 ${
-                            isActive
-                              ? "bg-[#6965db] text-white"
-                              : "bg-[#dee2e6] text-[#495057]"
-                          }`}
-                        >
-                          {idx + 1}
-                        </span>
-
-                        <div className="flex-1 min-w-0">
-                          <p
-                            className={`text-[10px] truncate ${
-                              isActive
-                                ? "text-[#343a40] font-semibold"
-                                : "text-[#495057] font-medium"
-                            }`}
-                          >
-                            {slide.name}
-                          </p>
-                        </div>
-
-                        {/* Slide Card Actions on Hover */}
-                        <div className="flex items-center opacity-0 group-hover:opacity-100 transition-opacity gap-0.5">
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              onDuplicateSlide(slide.frameId);
-                            }}
-                            title="Duplicate (Ctrl+D)"
-                            aria-label="Duplicate slide"
-                            className="p-0.5 rounded text-[#868e96] hover:text-[#6965db] hover:bg-[#e3e2fe] transition-colors"
-                          >
-                            <Copy className="w-2.5 h-2.5" />
-                          </button>
-                          <button
-                            type="button"
-                            disabled={idx === 0}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              moveSlide(idx, idx - 1);
-                            }}
-                            title={orientation === "horizontal" ? "Move left" : "Move up"}
-                            aria-label={orientation === "horizontal" ? "Move left" : "Move up"}
-                            className="p-0.5 rounded text-[#868e96] hover:text-[#212529] hover:bg-[#dee2e6] disabled:opacity-20 transition-colors"
-                          >
-                            {orientation === "horizontal" ? (
-                              <ChevronLeft className="w-2.5 h-2.5" />
-                            ) : (
-                              <ChevronUp className="w-2.5 h-2.5" />
-                            )}
-                          </button>
-                          <button
-                            type="button"
-                            disabled={idx === slides.length - 1}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              moveSlide(idx, idx + 1);
-                            }}
-                            title={orientation === "horizontal" ? "Move right" : "Move down"}
-                            aria-label={orientation === "horizontal" ? "Move right" : "Move down"}
-                            className="p-0.5 rounded text-[#868e96] hover:text-[#212529] hover:bg-[#dee2e6] disabled:opacity-20 transition-colors"
-                          >
-                            {orientation === "horizontal" ? (
-                              <ChevronRight className="w-2.5 h-2.5" />
-                            ) : (
-                              <ChevronDown className="w-2.5 h-2.5" />
-                            )}
-                          </button>
-                        </div>
-                      </div>
-
-                      {/* 16:9 Thumbnail Canvas Box */}
-                      <div className="relative w-full flex-1 min-h-0 aspect-video rounded-[6px] overflow-hidden bg-white border border-[#e9ecef] flex items-center justify-center">
+                      {/* Left: 16:9 Thumbnail Preview (matches screenshot card thumbnail) */}
+                      <div className="relative w-[54px] h-[34px] shrink-0 rounded-[6px] overflow-hidden bg-white border border-[var(--eb-border)] flex items-center justify-center">
                         {thumbUrl ? (
                           // eslint-disable-next-line @next/next/no-img-element
                           <img
@@ -509,34 +449,78 @@ export function SlideNavigator({
                             loading="lazy"
                           />
                         ) : (
-                          <div className="flex flex-col items-center justify-center text-[#adb5bd] gap-0.5">
-                            <ImageIcon className="w-3.5 h-3.5 opacity-50" />
-                          </div>
+                          <ImageIcon className="w-4 h-4 text-[#adb5bd]" />
                         )}
+                      </div>
+
+                      {/* Middle: Title & Relative Time */}
+                      <div className="flex-1 min-w-0 pr-1">
+                        <p
+                          className={`text-[14px] truncate leading-tight ${
+                            isActive ? "font-medium text-[#2b2a33]" : "font-normal text-[#1b1b1f]"
+                          }`}
+                        >
+                          {slide.name}
+                        </p>
+                        <p
+                          className={`text-[12px] truncate mt-0.5 ${
+                            isActive ? "text-[#6965db]" : "text-[#868e96]"
+                          }`}
+                        >
+                          {formatTimeAgo(slide.updated)}
+                        </p>
+                      </div>
+
+                      {/* Right: Drag Grip & Reorder Controls on Hover */}
+                      <div className="flex items-center opacity-0 group-hover:opacity-100 transition-opacity gap-0.5 shrink-0">
+                        <button
+                          type="button"
+                          disabled={idx === 0}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            moveSlide(idx, idx - 1);
+                          }}
+                          title="Move up in order"
+                          aria-label="Move up"
+                          className="p-1 rounded-[4px] text-[#9ca3af] hover:text-[#111827] hover:bg-[#e5e7eb] disabled:opacity-20 transition-colors"
+                        >
+                          <ChevronUp className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          type="button"
+                          disabled={idx === slides.length - 1}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            moveSlide(idx, idx + 1);
+                          }}
+                          title="Move down in order"
+                          aria-label="Move down"
+                          className="p-1 rounded-[4px] text-[#9ca3af] hover:text-[#111827] hover:bg-[#e5e7eb] disabled:opacity-20 transition-colors"
+                        >
+                          <ChevronDown className="w-3.5 h-3.5" />
+                        </button>
+                        <div
+                          className="cursor-grab active:cursor-grabbing p-1 text-[#9ca3af] hover:text-[#111827]"
+                          title="Drag to reorder"
+                        >
+                          <GripVertical className="w-3.5 h-3.5" />
+                        </div>
                       </div>
                     </div>
                   );
-                })}
+                })
+              )}
+            </div>
+          )}
+        </div>
 
-                {/* Excalidraw Styled Add Slide Card */}
-                <button
-                  type="button"
-                  onClick={onAdd16x9Slide}
-                  className={`border border-dashed border-[#ced4da] hover:border-[#6965db] rounded-[8px] text-[#495057] hover:text-[#6965db] hover:bg-[#f1f0ff] flex items-center justify-center transition-all shrink-0 ${
-                    orientation === "horizontal"
-                      ? "w-24 h-28 flex-col gap-1 text-[10px]"
-                      : "w-full py-2 px-2.5 gap-1.5 text-[11px]"
-                  }`}
-                  title="Add 16:9 Slide"
-                >
-                  <Plus className="w-3.5 h-3.5" />
-                  <span className="font-medium">Add Slide</span>
-                </button>
-              </>
-            )}
-          </div>
-        )}
-      </div>
-    </div>
+        {/* Bottom Status Footer (matches "Saved" in screenshot) */}
+        <div className="px-4 py-2.5 border-t border-[#f0f0f0] shrink-0 flex items-center justify-end">
+          <span className="text-[13px] text-[#868e96]">
+            {isSaved ? "Saved" : "Saving..."}
+          </span>
+        </div>
+      </aside>
+    </>
   );
 }

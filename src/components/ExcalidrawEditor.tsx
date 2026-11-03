@@ -623,10 +623,26 @@ export function ExcalidrawEditor() {
   return (
     <div
       ref={containerRef}
-      className="relative w-full h-screen overflow-hidden select-none bg-white"
+      className="relative w-full h-screen overflow-hidden select-none bg-white flex flex-row"
     >
+      {/* Slide Navigator on the side of the canvas */}
+      {!isPresenting && (
+        <SlideNavigator
+          slides={editorSlides}
+          activeSlideId={activeSlideId}
+          thumbnails={thumbnails}
+          isSaved={isSaved}
+          onSelectSlide={handleSelectSlide}
+          onReorderSlides={handleReorderSlides}
+          onDuplicateSlide={handleDuplicateSlide}
+          onAdd16x9Slide={handleAdd16x9Slide}
+          onExportProject={handleExportProject}
+          onImportProject={handleImportProject}
+        />
+      )}
+
       {/* Excalidraw Canvas Container */}
-      <div className="relative w-full h-full">
+      <div className="relative flex-1 h-full min-w-0 overflow-hidden">
         <Excalidraw
           excalidrawAPI={handleExcalidrawAPI}
           initialData={initialData}
@@ -649,22 +665,6 @@ export function ExcalidrawEditor() {
               height: `${activeSlideViewportBox.height}px`,
               borderRadius: "2px",
             }}
-          />
-        )}
-
-        {/* Draggable & Minimizable Slide Navigator with Import/Export & Storage status */}
-        {!isPresenting && (
-          <SlideNavigator
-            slides={editorSlides}
-            activeSlideId={activeSlideId}
-            thumbnails={thumbnails}
-            isSaved={isSaved}
-            onSelectSlide={handleSelectSlide}
-            onReorderSlides={handleReorderSlides}
-            onDuplicateSlide={handleDuplicateSlide}
-            onAdd16x9Slide={handleAdd16x9Slide}
-            onExportProject={handleExportProject}
-            onImportProject={handleImportProject}
           />
         )}
 

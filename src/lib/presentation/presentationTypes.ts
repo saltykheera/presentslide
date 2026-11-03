@@ -29,6 +29,7 @@ export interface PresentationSlide {
   y: number;
   width: number;
   height: number;
+  updated?: number;
 }
 
 export type NormalizedZoomValue = AppState["zoom"]["value"];

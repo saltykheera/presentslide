@@ -100,5 +100,6 @@ export function getPresentationFrames(
     y: frame.y,
     width: frame.width,
     height: frame.height,
+    updated: frame.updated || ((frame.customData as Record<string, unknown> | undefined)?.createdAt as number) || Date.now(),
   }));
 }
