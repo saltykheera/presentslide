@@ -75,7 +75,7 @@ export function SlideNavigator({
       if (stored) {
         try {
           return JSON.parse(stored);
-        } catch { }
+        } catch {}
       }
     }
     return { x: 16, y: 16 };
@@ -223,12 +223,13 @@ export function SlideNavigator({
         boxShadow:
           "0px 0px 1px 0px rgba(0, 0, 0, 0.17), 0px 0px 3px 0px rgba(0, 0, 0, 0.08), 0px 7px 14px 0px rgba(0, 0, 0, 0.08)",
       }}
-      className={`fixed z-30 select-none rounded-[10px] bg-[#ffffff] border border-[#e0e0e0] overflow-hidden transition-all duration-150 ${isMinimized
+      className={`fixed z-30 select-none rounded-[10px] bg-[#ffffff] border border-[#e0e0e0] overflow-hidden transition-all duration-150 ${
+        isMinimized
           ? "w-auto"
           : orientation === "horizontal"
-            ? "w-[min(90vw,720px)] max-h-44"
-            : "w-56 max-h-[calc(100vh-2.5rem)]"
-        }`}
+          ? "w-[min(90vw,720px)] max-h-44"
+          : "w-56 max-h-[calc(100vh-2.5rem)]"
+      }`}
       aria-label="Slides Navigator"
     >
       <div className="flex flex-col h-full text-xs font-sans text-[#1b1b1f]">
@@ -374,10 +375,11 @@ export function SlideNavigator({
         {/* Body Slide List in White Island theme */}
         {!isMinimized && (
           <div
-            className={`flex-1 p-2 bg-[#ffffff] excali-scrollbar ${orientation === "horizontal"
+            className={`flex-1 p-2 bg-[#ffffff] excali-scrollbar ${
+              orientation === "horizontal"
                 ? "flex flex-row items-center gap-2 overflow-x-auto overflow-y-hidden max-h-36 py-2"
                 : "flex flex-col overflow-y-auto space-y-2 max-h-[68vh]"
-              }`}
+            }`}
           >
             {slides.length === 0 ? (
               <div className="p-4 text-center text-[11px] text-[#868e96] leading-normal flex flex-col items-center justify-center gap-2 w-full">
@@ -406,11 +408,13 @@ export function SlideNavigator({
                       onDragOver={handleSlideDragOver}
                       onDrop={(e) => handleSlideDrop(e, idx)}
                       onClick={() => onSelectSlide(slide.frameId)}
-                      className={`group relative flex flex-col p-1.5 rounded-[8px] cursor-pointer border transition-all duration-150 select-none shrink-0 ${orientation === "horizontal" ? "w-32 h-28" : "w-full"
-                        } ${isActive
+                      className={`group relative flex flex-col p-1.5 rounded-[8px] cursor-pointer border transition-all duration-150 select-none shrink-0 ${
+                        orientation === "horizontal" ? "w-32 h-28" : "w-full"
+                      } ${
+                        isActive
                           ? "bg-[#e3e2fe] border-[#6965db] ring-1 ring-[#6965db]/50"
                           : "bg-[#f8f9fa] border-[#e9ecef] hover:bg-[#f1f3f5]"
-                        } ${isDragging ? "opacity-30 scale-95" : "opacity-100"}`}
+                      } ${isDragging ? "opacity-30 scale-95" : "opacity-100"}`}
                     >
                       {/* Card Header (Drag handle, Index, Title, Actions) */}
                       <div className="flex items-center gap-1.5 w-full mb-1">
@@ -422,20 +426,22 @@ export function SlideNavigator({
                         </div>
 
                         <span
-                          className={`text-[9px] font-bold w-3.5 h-3.5 rounded-[4px] flex items-center justify-center shrink-0 ${isActive
+                          className={`text-[9px] font-bold w-3.5 h-3.5 rounded-[4px] flex items-center justify-center shrink-0 ${
+                            isActive
                               ? "bg-[#6965db] text-white"
                               : "bg-[#dee2e6] text-[#495057]"
-                            }`}
+                          }`}
                         >
                           {idx + 1}
                         </span>
 
                         <div className="flex-1 min-w-0">
                           <p
-                            className={`text-[10px] truncate ${isActive
+                            className={`text-[10px] truncate ${
+                              isActive
                                 ? "text-[#343a40] font-semibold"
                                 : "text-[#495057] font-medium"
-                              }`}
+                            }`}
                           >
                             {slide.name}
                           </p>
@@ -516,10 +522,11 @@ export function SlideNavigator({
                 <button
                   type="button"
                   onClick={onAdd16x9Slide}
-                  className={`border border-dashed border-[#ced4da] hover:border-[#6965db] rounded-[8px] text-[#495057] hover:text-[#6965db] hover:bg-[#f1f0ff] flex items-center justify-center transition-all shrink-0 ${orientation === "horizontal"
+                  className={`border border-dashed border-[#ced4da] hover:border-[#6965db] rounded-[8px] text-[#495057] hover:text-[#6965db] hover:bg-[#f1f0ff] flex items-center justify-center transition-all shrink-0 ${
+                    orientation === "horizontal"
                       ? "w-24 h-28 flex-col gap-1 text-[10px]"
                       : "w-full py-2 px-2.5 gap-1.5 text-[11px]"
-                    }`}
+                  }`}
                   title="Add 16:9 Slide"
                 >
                   <Plus className="w-3.5 h-3.5" />
