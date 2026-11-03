@@ -5,6 +5,7 @@ import type { PresentationSlide } from "@/lib/presentation/presentationTypes";
 import {
   Search,
   Plus,
+  Play,
   ChevronDown,
   ChevronRight,
   Monitor,
@@ -32,6 +33,7 @@ interface SlideNavigatorProps {
   onAdd16x9Slide: () => void;
   onExportProject?: () => void;
   onImportProject?: (file: File) => void;
+  onStartPresentation?: (slideId?: string) => void;
 }
 
 // Relative time formatting helper (e.g. "Just now", "2m ago", "1h ago", "26 Oct")
@@ -63,6 +65,7 @@ export function SlideNavigator({
   onAdd16x9Slide,
   onExportProject,
   onImportProject,
+  onStartPresentation,
 }: SlideNavigatorProps) {
   // Drawer open / collapsed state (persisted)
   const [isOpen, setIsOpen] = useState<boolean>(() => {
@@ -218,6 +221,18 @@ export function SlideNavigator({
         >
           <Plus className="w-[18px] h-[18px]" strokeWidth={1.6} />
         </button>
+        {onStartPresentation && (
+          <button
+            type="button"
+            onClick={() => onStartPresentation(activeSlideId || undefined)}
+            disabled={slides.length === 0}
+            title="Start presentation (Ctrl+P / ⌘P / Alt+P)"
+            aria-label="Start presentation"
+            className="group w-8 h-8 rounded-[8px] flex items-center justify-center text-[#6b7280] hover:text-[#6965db] hover:bg-[#f3f4f6] disabled:opacity-40 transition-colors"
+          >
+            <Play className="w-[15px] h-[15px] fill-current ml-0.5" strokeWidth={1.6} />
+          </button>
+        )}
       </aside>
     );
   }
@@ -298,23 +313,37 @@ export function SlideNavigator({
           </div>
         </div>
 
-        {/* Action Buttons Row ("+ New slide", Copy, More options) */}
+        {/* Action Buttons Row ("+ New slide", Play, Copy, More options) */}
         <div className="px-3.5 py-1.5 flex items-center gap-2 shrink-0">
           {/* Main Primary Button: "+ New slide" with color #6965db and border-radius 8px */}
           <button
             type="button"
             onClick={onAdd16x9Slide}
             title="Create new 16:9 slide (Ctrl+N / ⌘N)"
-            className="eb-btn eb-btn-primary flex-1 !bg-[#6965db] hover:!bg-[#5b57d1] active:!bg-[#4a47b1] !text-white !border-[#6965db]"
+            className="eb-btn eb-btn-primary flex-1 !bg-[#6965db] hover:!bg-[#5b57d1] active:!bg-[#4a47b1] !text-white !border-[#6965db] px-2.5"
             style={{
               backgroundColor: "#6965db",
               borderColor: "#6965db",
               color: "#ffffff",
             }}
           >
-            <Plus className="w-4 h-4 stroke-[2.5] text-white" />
-            <span className="text-white">New slide</span>
+            <Plus className="w-4 h-4 stroke-[2.5] text-white shrink-0" />
+            <span className="text-white truncate">New slide</span>
           </button>
+
+          {/* Start Presentation / Play Button with border-radius 8px */}
+          {onStartPresentation && (
+            <button
+              type="button"
+              onClick={() => onStartPresentation(activeSlideId || undefined)}
+              disabled={slides.length === 0}
+              title="Start presentation (Ctrl+P / ⌘P / Alt+P)"
+              aria-label="Start presentation"
+              className="eb-btn eb-btn-icon text-[#6965db] hover:text-[#5b57d1] hover:border-[#6965db] hover:bg-[#eeedfd] disabled:opacity-40 transition-colors shrink-0"
+            >
+              <Play className="w-4 h-4 fill-[#6965db] ml-0.5" />
+            </button>
+          )}
 
           {/* Quick Duplicate / Copy Button with border-radius 8px */}
           <button
@@ -326,13 +355,13 @@ export function SlideNavigator({
             disabled={slides.length === 0}
             title="Duplicate active slide (Ctrl+D / ⌘D)"
             aria-label="Duplicate active slide"
-            className="eb-btn eb-btn-icon disabled:opacity-40"
+            className="eb-btn eb-btn-icon disabled:opacity-40 shrink-0"
           >
             <Copy className="w-4 h-4 text-[#495057]" />
           </button>
 
           {/* Settings / More Options Button with border-radius 8px */}
-          <div className="relative" ref={moreMenuRef}>
+          <div className="relative shrink-0" ref={moreMenuRef}>
             <button
               type="button"
               onClick={() => setIsMoreMenuOpen(!isMoreMenuOpen)}
@@ -345,6 +374,23 @@ export function SlideNavigator({
 
             {isMoreMenuOpen && (
               <div className="absolute right-0 top-full mt-1.5 w-48 rounded-[8px] bg-white border border-[var(--eb-border)] shadow-xl py-1 z-40 text-[13px] text-[#1b1b1f]">
+                {onStartPresentation && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsMoreMenuOpen(false);
+                      onStartPresentation(activeSlideId || undefined);
+                    }}
+                    disabled={slides.length === 0}
+                    className="w-full flex items-center justify-between px-3 py-2 text-left hover:bg-[#f8f9fa] hover:text-[#6965db] transition-colors disabled:opacity-40"
+                  >
+                    <div className="flex items-center gap-2">
+                      <Play className="w-4 h-4 fill-[#6965db] text-[#6965db] ml-0.5" />
+                      <span>Start presentation</span>
+                    </div>
+                    <span className="text-[11px] text-[#9ca3af]">⌘P</span>
+                  </button>
+                )}
                 {onExportProject && (
                   <button
                     type="button"
@@ -473,6 +519,20 @@ export function SlideNavigator({
 
                       {/* Right: Drag Grip & Reorder Controls on Hover */}
                       <div className="flex items-center opacity-0 group-hover:opacity-100 transition-opacity gap-0.5 shrink-0">
+                        {onStartPresentation && (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onStartPresentation(slide.frameId);
+                            }}
+                            title="Present from this slide"
+                            aria-label="Present from this slide"
+                            className="p-1 rounded-[4px] text-[#9ca3af] hover:text-[#6965db] hover:bg-[#eeedfd] transition-colors"
+                          >
+                            <Play className="w-3.5 h-3.5 fill-current ml-0.5" />
+                          </button>
+                        )}
                         <button
                           type="button"
                           disabled={idx === 0}

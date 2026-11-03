@@ -114,9 +114,9 @@ export function usePresentation({
    * 1. Inspect elements and compute presentation frames using custom order if set
    * 2. If 0 frames, inform user and cancel
    * 3. Capture current viewport
-   * 4. Focus slide 0 and activate presentation state
+   * 4. Focus initial slide (or slide 0) and activate presentation state
    */
-  const startPresentation = useCallback(() => {
+  const startPresentation = useCallback((initialSlideId?: string) => {
     if (!adapter) return;
 
     const elements = adapter.getElements();
@@ -134,11 +134,20 @@ export function usePresentation({
     savedViewportRef.current = captureViewport(appState);
 
     setSlides(discoveredSlides);
-    setCurrentSlideIndex(0);
+    let startIndex = 0;
+    if (initialSlideId) {
+      const foundIdx = discoveredSlides.findIndex(
+        (s) => s.frameId === initialSlideId
+      );
+      if (foundIdx !== -1) {
+        startIndex = foundIdx;
+      }
+    }
+    setCurrentSlideIndex(startIndex);
     setIsPresenting(true);
 
-    // Initial transition to slide 1
-    adapter.focusFrame(discoveredSlides[0].frameId, false);
+    // Initial transition to starting slide
+    adapter.focusFrame(discoveredSlides[startIndex].frameId, false);
   }, [adapter, customSlideOrder, onEmptyPresentation]);
 
   /**

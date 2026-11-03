@@ -19,7 +19,7 @@ import {
 } from "@/lib/presentation/presentationStorage";
 import { PresentationOverlay } from "@/components/presentation/PresentationOverlay";
 import { SlideNavigator } from "@/components/presentation/SlideNavigator";
-import { Play, AlertCircle } from "lucide-react";
+import { AlertCircle } from "lucide-react";
 import {
   zoomToFitBounds,
   exportToCanvas,
@@ -638,6 +638,7 @@ export function ExcalidrawEditor() {
           onAdd16x9Slide={handleAdd16x9Slide}
           onExportProject={handleExportProject}
           onImportProject={handleImportProject}
+          onStartPresentation={startPresentation}
         />
       )}
 
@@ -666,19 +667,6 @@ export function ExcalidrawEditor() {
               borderRadius: "2px",
             }}
           />
-        )}
-
-        {/* Floating Round Present Button (bottom right on canvas) */}
-        {!isPresenting && (
-          <button
-            type="button"
-            onClick={startPresentation}
-            title="Start Presentation (Ctrl+P / ⌘P / Alt+P)"
-            aria-label="Start Presentation"
-            className="fixed bottom-6 right-6 z-30 w-14 h-14 rounded-full bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white shadow-xl hover:shadow-2xl flex items-center justify-center transition-all duration-200 border border-indigo-400/30 focus:outline-none focus:ring-4 focus:ring-indigo-500/30 group"
-          >
-            <Play className="w-6 h-6 fill-white ml-0.5 group-hover:scale-110 transition-transform" />
-          </button>
         )}
 
         {/* Presentation Overlay */}

@@ -101,4 +101,24 @@ describe("usePresentation hook tests", () => {
       zoom: { value: 1.5 as unknown as AppState["zoom"]["value"] },
     });
   });
+
+  it("starts presentation directly on specified initial slide ID", () => {
+    const elements = [createMockFrame("F1", 0, 0), createMockFrame("F2", 1000, 0)];
+    const mockAdapter: PresentationExcalidrawAdapter = {
+      getElements: () => elements,
+      getAppState: () => ({ scrollX: 0, scrollY: 0, zoom: { value: 1 as unknown as AppState["zoom"]["value"] } } as AppState),
+      focusFrame: vi.fn(),
+      restoreViewport: vi.fn(),
+    };
+
+    const { result } = renderHook(() => usePresentation({ adapter: mockAdapter }));
+
+    act(() => {
+      result.current.startPresentation("F2");
+    });
+
+    expect(result.current.isPresenting).toBe(true);
+    expect(result.current.currentSlideIndex).toBe(1);
+    expect(mockAdapter.focusFrame).toHaveBeenCalledWith("F2", false);
+  });
 });
